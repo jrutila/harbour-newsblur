@@ -1,0 +1,3 @@
+[submodule "qml/feedlib"]
+	path = qml/feedlib
+	url = git@github.com:jrutila/sailfish-feed-lib.git
