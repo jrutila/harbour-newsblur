@@ -1,5 +1,5 @@
 # PRI file that includes secrets
-feedly-api-config.pri
+api-config.pri
 
 *.user
 *.spec

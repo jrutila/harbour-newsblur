@@ -30,12 +30,25 @@
 
 import QtQuick 2.0
 import Sailfish.Silica 1.0
-import "pages"
+import "feedlib"
+import "provider" as NewsBlur
 
 ApplicationWindow
 {
-    initialPage: Component { FirstPage { } }
-    cover: Qt.resolvedUrl("cover/CoverPage.qml")
+    initialPage: Qt.resolvedUrl("feedlib/pages/FeedsListPage.qml")
+    cover: Qt.resolvedUrl("feedlib/cover/DefaultCover.qml")
+
+    NewsBlur.Api {
+        id: feedAPI
+    }
+
+    Connections {
+        target: pageStack
+        onCurrentPageChanged: {
+            feedAPI.acquireErrorIndicator(pageStack.currentPage);
+            feedAPI.acquireStatusIndicator(pageStack.currentPage);
+        }
+    }
 }
 
 

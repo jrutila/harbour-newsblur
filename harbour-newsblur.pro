@@ -24,10 +24,32 @@ OTHER_FILES += qml/harbour-newsblur.qml \
     rpm/harbour-newsblur.spec \
     rpm/harbour-newsblur.yaml \
     translations/*.ts \
-    harbour-newsblur.desktop
+    harbour-newsblur.desktop \
+    qml/feedlib/pages/SignInPage.qml \
+    qml/feedlib/pages/FeedsListPage.qml \
+    qml/feedlib/pages/FeedSearchPage.qml \
+    qml/feedlib/pages/ArticlesListPage.qml \
+    qml/feedlib/pages/ArticlePage.qml \
+    qml/feedlib/pages/ArticleInfoPage.qml \
+    qml/feedlib/pages/AboutPage.qml \
+    qml/feedlib/cover/DefaultCover.qml \
+    qml/feedlib/lib/dbmanager.js \
+    qml/feedlib/lib/api.js \
+    qml/feedlib/dialogs/UpdateFeedDialog.qml \
+    qml/feedlib/dialogs/SelectCategoriesDialog.qml \
+    qml/newsblur/api.js \
+    qml/newsblur/FeedItem.qml \
+    qml/newsblur/Api.qml \
+    api-config.pri \
+    qml/provider/api.js \
+    qml/provider/FeedItem.qml \
+    qml/provider/Api.qml
 
 # to disable building translations every time, comment out the
 # following CONFIG line
 CONFIG += sailfishapp_i18n
 TRANSLATIONS += translations/harbour-newsblur-de.ts
 
+# Feedly API keys
+NEWSBLUR_API_CONFIG = api-config.pri
+exists($${NEWSBLUR_API_CONFIG}) include($${NEWSBLUR_API_CONFIG})

@@ -1,37 +1,32 @@
 /*
-  Copyright (C) 2013 Jolla Ltd.
-  Contact: Thomas Perl <thomas.perl@jollamobile.com>
+  Copyright (C) 2014 Luca Donaggio
+  Contact: Luca Donaggio <donaggio@gmail.com>
   All rights reserved.
 
-  You may use this file under the terms of BSD license as follows:
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Jolla Ltd nor the
-      names of its contributors may be used to endorse or promote products
-      derived from this software without specific prior written permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
-  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  You may use this file under the terms of MIT license
 */
 
 #ifdef QT_QML_DEBUG
 #include <QtQuick>
 #endif
 
+#ifndef NEWSBLUR_CLIENT_ID
+#define NEWSBLUR_CLIENT_ID "sandbox"
+#endif
+
+#ifndef NEWSBLUR_CLIENT_SECRET
+#define NEWSBLUR_CLIENT_SECRET ""
+#endif
+
+#ifndef APP_VERSION
+#define APP_VERSION "0.0"
+#endif
+
+#include <QScopedPointer>
+#include <QVariant>
+#include <QGuiApplication>
+#include <QQuickView>
+#include <QQmlContext>
 #include <sailfishapp.h>
 
 
@@ -46,6 +41,20 @@ int main(int argc, char *argv[])
     //
     // To display the view, call "show()" (will show fullscreen on device).
 
-    return SailfishApp::main(argc, argv);
+//    return SailfishApp::main(argc, argv);
+
+    QScopedPointer<QGuiApplication> app(SailfishApp::application(argc, argv));
+    QScopedPointer<QQuickView> view(SailfishApp::createView());
+
+//    app->setOrganizationName("Cthulhu Scrolls");
+//    app->setOrganizationDomain("cthulhuscrolls.com");
+//    app->setApplicationName("harbour-feedhaven");
+    app->setApplicationVersion(QString(APP_VERSION));
+
+    view->rootContext()->setContextProperty(QString("feedlyClientId"), QVariant(NEWSBLUR_CLIENT_ID));
+    view->rootContext()->setContextProperty(QString("feedlyClientSecret"), QVariant(NEWSBLUR_CLIENT_SECRET));
+    view->setSource(SailfishApp::pathTo(QString("qml/harbour-newsblur.qml")));
+    view->show();
+    return app->exec();
 }
 
