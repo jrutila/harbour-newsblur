@@ -3,7 +3,7 @@ Type=Application
 X-Nemo-Application-Type=silica-qt5
 Icon=harbour-newsblur
 Exec=harbour-newsblur
-Name=harbour-newsblur
+Name=SailBlur
 # translation example:
 # your app name in German locale (de)
 Name[de]=harbour-newsblur

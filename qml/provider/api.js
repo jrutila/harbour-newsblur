@@ -12,6 +12,7 @@ var _apiCalls = {
     "markers": { "method": "POST", "protocol": "http", "url": "reader/:route" },
     "markersCounts": { "method": "GET", "protocol": "http", "url": "reader/refresh_feeds" },
     "streamContent": { "method": "GET", "protocol": "http", "url": "reader/feed/:streamId" },
+    "allEntries": { "method": "GET", "protocol": "http", "url": "reader/river_stories" },
     "entries": { "method": "GET", "protocol": "http", "url": "entries" },
     "searchFeed": { "method": "GET", "protocol": "http", "url": "search/feeds" },
     "updateSubscription": { "method": "POST", "protocol": "https", "url": "subscriptions"},

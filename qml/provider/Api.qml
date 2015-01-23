@@ -23,7 +23,8 @@ QtObject {
     property var pendingRequest: null
     property var currentEntry: null
     property string continuation: ""
-    property int totalUnread: 0
+    property int totalNeutralUnread: 0
+    property int totalPositiveUnread: 0
     property int uniqueFeeds: 0
     property QtObject feedsListModel: null
     property QtObject articlesListModel: null
@@ -41,8 +42,7 @@ QtObject {
         return false;
     }
     function streamIsCategory(streamId) {
-        // TODO: Implement
-        return false;
+        return (streamId.indexOf('category') > -1);
     }
 
     /*
@@ -124,7 +124,8 @@ QtObject {
         pendingRequest = null;
         currentEntry = null;
         continuation = "";
-        totalUnread = 0;
+        totalNeutralUnread = 0;
+        totalPositiveUnread = 0;
         uniqueFeeds = 0;
         if (feedsListModel) feedsListModel.clear();
         if (articlesListModel) articlesListModel.clear();
@@ -251,6 +252,8 @@ QtObject {
                 if (a.positive < b.positive) return 1;
                 return 0;
             });
+            totalNeutralUnread = neutralCount;
+            totalPositiveUnread = positiveCount;
             if (tmpSubscriptions.length) {
                 // Add "All feeds" fake subscription
                 if (userId) {
@@ -320,10 +323,10 @@ QtObject {
                     if (feedsListModel.get(j).id === feed_id) {
                         feedsListModel.setProperty(j, "unreadCount", tmpObj.count);
                         if (userId) {
-                            if (tmpObj.id === ("user/" + userId + "/category/global.all")) totalUnread = tmpObj.count;
+                            if (tmpObj.id === ("user/" + userId + "/category/global.all")) totalNeutralUnread = tmpObj.count;
                         } else {
                             if (!tmpTotUnreadUpd) {
-                                totalUnread += tmpObj.count;
+                                totalNeutralUnread += tmpObj.count;
                                 tmpTotUnreadUpd = true;
                             }
                         }
@@ -344,8 +347,30 @@ QtObject {
             busy = true;
             if (!more) page = 1;
             else page++;
-            var param = { "streamId": subscriptionId, "read_filter": "unread", 'page': page };
-            FeedlyAPI.call("streamContent", param, streamContentDoneCB, accessToken);
+            if (subscriptionId.indexOf('global.') > -1)
+            {
+                var param = { "read_filter": "unread", 'page': page, 'feeds': [] };
+                for (var f = 0; f < feedsListModel.count; f++)
+                {
+                    var getFeed = true;
+                    var feed = feedsListModel.get(f);
+                    if (subscriptionId.indexOf('positive') > -1 && feed)
+                    {
+                        console.log(feed.id)
+                        console.log(feed.positive)
+                        // Feeds that include important items
+                        getFeed = false;
+                        if (feed.positive > 0) getFeed = true;
+                    }
+                    if (getFeed && feed.id.indexOf('global.') == -1) param.feeds.push(feed.id);
+                }
+                console.log(param.feeds)
+                param.streamId = subscriptionId;
+                FeedlyAPI.call('allEntries', param, streamContentDoneCB, accessToken);
+            } else {
+                var param = { "streamId": subscriptionId, "read_filter": "unread", 'page': page };
+                FeedlyAPI.call("streamContent", param, streamContentDoneCB, accessToken);
+            }
         } else error(qsTr("No subscriptionId found."));
     }
 
@@ -355,12 +380,11 @@ QtObject {
             var normalizeSpaces = new RegExp("\\s+", "g");
             if (!retObj.callParams.page) articlesListModel.clear();
             continuation = true;
-            var streamTitle = "-";
 
+            var titles = {};
             for (var j = 0; j < feedsListModel.count; j++) {
                 var feed = feedsListModel.get(j);
-                if (feed && feed.id === retObj.callParams['streamId'])
-                    streamTitle = feed.title;
+                titles[feed.id] = feed.title;
             }
 
             if (Array.isArray(retObj.response.stories)) {
@@ -370,6 +394,8 @@ QtObject {
                     var tmpUpd = new Date(tmpObj.story_date);
                     // Extract date part
                     var tmpUpdDate = new Date(tmpUpd.getFullYear(), tmpUpd.getMonth(), tmpUpd.getDate());
+                    var streamId = tmpObj.story_hash.split(":")[0];
+                    var streamTitle = titles[streamId];
                     // Create article summary
                     var tmpSummary = "" // No summaries in NewsBlur //((typeof tmpObj.story_title !== "undefined") ? tmpObj.story_title : ((typeof tmpObj.story_content !== "undefined") ? tmpObj.story_content : ""));
                     if (tmpSummary) tmpSummary = tmpSummary.replace(stripHtmlTags, " ").replace(normalizeSpaces, " ").trim().substr(0, 320);
@@ -387,14 +413,25 @@ QtObject {
                                                "streamTitle": streamTitle,
                                                "busy": false,
                                                "tagging": false,
-                                               "priority": 0
+                                               "priority": 0, // Calculated below
+                                               "highlighted": false,
                                              };
                     for (var ii in tmpObj.intelligence)
                     {
                         article.priority += tmpObj.intelligence[ii];
                     }
+                    if (article.priority > 0)
+                    {
+                        console.log("Highlighted "+article.title)
+                        article.highlighted = true;
+                    }
 
-                    articlesListModel.append(article)
+                    if (retObj.callParams.streamId.indexOf('.positive') > -1)
+                    {
+                        if (article.priority > 0)
+                            articlesListModel.append(article)
+                    } else
+                        articlesListModel.append(article)
                 }
             }
             busy = false;
@@ -410,7 +447,7 @@ QtObject {
     function markFeedAsRead(feedId, lastEntryId) {
         if (feedId) {
             var param = { "action": "markAsRead" };
-            if (feedId.indexOf("/category/global.all") >= 0) {
+            if (feedId.indexOf("category/global.all") >= 0) {
                 // "All feeds" actually is a category
                 param.type = "categories";
                 param.categoryIds = [feedId];
@@ -522,10 +559,12 @@ QtObject {
                 }
                 if (unreadCountChanged) {
                     var allFeedsIdx = -1;
+                    var positiveFeedsIdx = -1;
+                    var pr = "neutral";
                     for (var j = 0; j < feedsListModel.count; j++) {
-                        if (feedsListModel.get(j).id.indexOf("/category/global.all") >= 0) allFeedsIdx = j;
+                        if (feedsListModel.get(j).id.indexOf("category/global.all") >= 0) allFeedsIdx = j;
+                        if (feedsListModel.get(j).id.indexOf("category/global.positive") >= 0) positiveFeedsIdx = j;
                         if (feedsListModel.get(j).id === streamId.toString()) {
-                            var pr = "neutral";
                             if (article.priority > 0) pr = "positive";
                             var tmpUnreadCount = feedsListModel.get(j)[pr];
                             if ((retObj.callParams.action === "markAsRead") && (tmpUnreadCount > 0)) tmpUnreadCount--;
@@ -533,9 +572,27 @@ QtObject {
                             feedsListModel.setProperty(j, pr, tmpUnreadCount);
                         }
                     }
-                    if ((retObj.callParams.action === "markAsRead") && (totalUnread > 0)) totalUnread--;
-                    else if (retObj.callParams.action === "keepUnread") totalUnread++;
-                    if (allFeedsIdx >= 0) feedsListModel.setProperty(allFeedsIdx, "unreadCount", totalUnread);
+                    if (pr == "neutral") {
+                        if ((retObj.callParams.action === "markAsRead") && (totalNeutralUnread > 0)) totalNeutralUnread--;
+                        else if (retObj.callParams.action === "keepUnread") totalNeutralUnread++;
+                        if (allFeedsIdx >= 0) {
+                            feedsListModel.setProperty(allFeedsIdx, "unreadCount", totalNeutralUnread);
+                            feedsListModel.setProperty(allFeedsIdx, "neutral", totalNeutralUnread);
+                        }
+                    }
+                    if (pr == "positive") {
+                        if ((retObj.callParams.action === "markAsRead") && (totalPositiveUnread > 0)) totalPositiveUnread--;
+                        else if (retObj.callParams.action === "keepUnread") totalPositiveUnread++;
+                        if (positiveFeedsIdx >= 0) {
+                            feedsListModel.setProperty(positiveFeedsIdx, "unreadCount", totalPositiveUnread);
+                            feedsListModel.setProperty(positiveFeedsIdx, "positive", totalPositiveUnread);
+                        }
+                        if (allFeedsIdx >= 0) {
+                            feedsListModel.setProperty(allFeedsIdx, "unreadCount", totalNeutralUnread);
+                            feedsListModel.setProperty(allFeedsIdx, "neutral", totalNeutralUnread);
+                            feedsListModel.setProperty(allFeedsIdx, "positive", totalPositiveUnread);
+                        }
+                    }
                 }
             }
         }
@@ -621,7 +678,7 @@ QtObject {
         }
         if (checkResponse(retObj, unsubscribeDoneCB)) {
             for (j = 0; j < feedsListModel.count; j++) {
-                if (feedsListModel.get(j).id.indexOf("/category/global.all") >= 0) {
+                if (feedsListModel.get(j).id.indexOf("category/global.all") >= 0) {
                     feedsListModel.setProperty(j, "unreadCount", (feedsListModel.get(j).unreadCount - unreadCount));
                 }
                 if (feedsListModel.get(j).id === retObj.callParams) feedsListModel.remove(j);

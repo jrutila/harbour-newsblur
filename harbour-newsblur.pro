@@ -43,7 +43,8 @@ OTHER_FILES += qml/harbour-newsblur.qml \
     api-config.pri \
     qml/provider/api.js \
     qml/provider/FeedItem.qml \
-    qml/provider/Api.qml
+    qml/provider/Api.qml \
+    qml/provider/AboutPage.qml
 
 # to disable building translations every time, comment out the
 # following CONFIG line
