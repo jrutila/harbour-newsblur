@@ -12,14 +12,12 @@
 # The name of your application
 TARGET = harbour-newsblur
 
-CONFIG += sailfishapp
+CONFIG += sailfishapp \
+          sailfishapp_no_deploy_qml
 
 SOURCES += src/harbour-newsblur.cpp
 
 OTHER_FILES += qml/harbour-newsblur.qml \
-    qml/cover/CoverPage.qml \
-    qml/pages/FirstPage.qml \
-    qml/pages/SecondPage.qml \
     rpm/harbour-newsblur.changes.in \
     rpm/harbour-newsblur.spec \
     rpm/harbour-newsblur.yaml \
@@ -44,7 +42,13 @@ OTHER_FILES += qml/harbour-newsblur.qml \
     qml/provider/api.js \
     qml/provider/FeedItem.qml \
     qml/provider/Api.qml \
-    qml/provider/AboutPage.qml
+    qml/provider/AboutPage.qml \
+    qml/harbour-newsblur.qml
+
+qml.files += qml
+unix:qml.extra = rm -Rf /home/mersdk/share/SailfishProjects/harbour-newsblur/qml/feedlib/.git
+qml.path = /usr/share/$${TARGET}
+INSTALLS += qml
 
 # to disable building translations every time, comment out the
 # following CONFIG line
